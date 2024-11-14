@@ -15,22 +15,23 @@ function countdown(seconds) {
     let toCountDown = start;
     if (!isPaused && stopOnZero && toCountDown < new Date()) return;    
     toCountDown = calculateToCountdown(seconds);
-  	if (isPaused) {
+  	
+    if (isPaused) {
 	  	pausedAt = +pausedAt + +seconds;
     }  
+  
     start = toCountDown;
+  
     $('#countdown').countdown(toCountDown, function (event) {
         if (event.type === "finish") $(this).html(fieldData.onComplete);
         else if (event.type === "stoped") { 
           $(this).html(event.strftime('%I:%M:%S') + " - " + fieldData.onPause);
         }
-        else { 
-          $(this).html(event.strftime('%I:%M:%S')); // event.type = "update"
-          if(isPaused) {
-              pausedAt += seconds;
-              $('#countdown').countdown('pause');
-              //autopausing after updating the value.
-          }
+        else {
+          if (isPaused) {
+          	$(this).html(event.strftime('%I:%M:%S') + " - " + fieldData.onPause);
+            $('#countdown').countdown('pause');
+          } else $(this).html(event.strftime('%I:%M:%S')); // event.type = "update"
         }
     });
     saveState();
@@ -65,10 +66,6 @@ function calculateTimeDiff(timeEnd, timeStart) {
 function unpauseTimer() {
   let current = new Date();
   if(isPaused) {
-    console.log("Unpause timer");
-    console.log("start: " + start);
-    console.log("unpausedAt: " + current);
-    console.log("pausedAt: " + pausedAt);
     minTime = current;
     minTime.setSeconds(minTime.getSeconds() + pausedAt);
     start = minTime;
@@ -81,13 +78,9 @@ function unpauseTimer() {
 function pauseTimer() {
   let current = new Date();
   if(!isPaused) {
-    console.log("Pause timer");
     let toCountDown = calculateToCountdown(0);
     pausedAt = calculateTimeDiff(toCountDown, current)
     isPaused = true;
-    console.log("current: " + current);    
-    console.log("toCountDonw: " + toCountDown);
-    console.log("pausedAt: " + pausedAt);
     // Pause the countdown
 	$('#countdown').countdown('pause');
   } 
@@ -121,7 +114,14 @@ window.addEventListener('onEventReceived', function (obj) {
         if (text.startsWith(fieldData.addTimeCommand)) {
             const seconds = parseFloat(text.split(' ')[1]) * 60;
             if (isNaN(seconds)) return;
-         	countdown(seconds);
+          	let iWasPaused = isPaused;
+          	if(iWasPaused) {
+              unpauseTimer();
+            }
+            countdown(seconds);
+            if(iWasPaused) {
+              pauseTimer();
+            }
         } else if (text.startsWith(fieldData.pauseTimeCommand)) {
         	pauseTimer();
         } else if (text.startsWith(fieldData.unpauseTimeCommand)) {
@@ -151,7 +151,15 @@ window.addEventListener('onEventReceived', function (obj) {
                 countdown(1); 
             }
             if (obj.detail.event.field === 'addTime') {
-                countdown(60);
+                const seconds = 60;
+          		let iWasPaused = isPaused;
+                if(iWasPaused) {
+                  unpauseTimer();
+                }
+                countdown(seconds);
+                if(iWasPaused) {
+                  pauseTimer();
+                }
             }
           	if (obj.detail.event.field === 'pauseTime') {
                 pauseTimer();
